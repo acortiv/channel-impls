@@ -1,18 +1,18 @@
+use channels::ref_channel::Channel;
 use std::thread;
 
-use channels::Channel;
-
 fn main() {
-    let channel = Channel::new();
-    let t = thread::current();
+    let mut channel = Channel::new();
     thread::scope(|s| {
-        s.spawn(|| {
-            channel.send("Hello World!");
-            t.unpark();
+        let (sender, receiver) = channel.split();
+
+        // Calling split() a second time within the thread scope results in an error, while calling it after the scope is acceptable.
+        // Even calling split() before the scope is fine, as long as you stop using the returned Sender and Receiver before the Scope starts
+        // let (sender1, receiver2) = channel.split();
+
+        s.spawn(move || {
+            sender.send("Hello World!");
         });
-        while !channel.is_ready() {
-            thread::park();
-        }
-        assert_eq!(channel.receive(), "Hello World!");
+        assert_eq!(receiver.receive(), "Hello World!");
     });
 }
